@@ -2,11 +2,14 @@ import { config } from './config.js';
 import { pollUpdates, sendMessage } from './telegram.js';
 import { sessionExists, sendKey, sendText, pasteText } from './tmux.js';
 import { startOutputLoop, forceFlush } from './output.js';
+import { BUTTON_TO_CMD, REPLY_KEYBOARD } from './keyboard.js';
 
 console.log(`claude-tg-bridge started. Target: ${config.tmuxTarget}`);
 if (!process.env.TELEGRAM_ALLOWED_USER_ID) {
   console.log(`TELEGRAM_ALLOWED_USER_ID unset — falling back to TELEGRAM_CHAT_ID (${config.chatId}).`);
 }
+
+await sendMessage('bridge online', { html: false, replyMarkup: REPLY_KEYBOARD });
 
 startOutputLoop();
 
@@ -28,7 +31,9 @@ for await (const update of pollUpdates()) {
   }
 
   try {
-    if (text.startsWith('!')) {
+    if (BUTTON_TO_CMD[text]) {
+      await handleControl(BUTTON_TO_CMD[text]);
+    } else if (text.startsWith('!')) {
       await handleControl(text.slice(1).trim().toLowerCase());
     } else if (text.includes('\n')) {
       await pasteText(config.tmuxTarget, text);

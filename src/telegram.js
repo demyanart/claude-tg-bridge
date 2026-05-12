@@ -26,11 +26,14 @@ export async function* pollUpdates() {
   }
 }
 
-export async function sendMessage(text, { html = true } = {}) {
-  for (const chunk of splitChunks(text, config.maxMsgLen)) {
+export async function sendMessage(text, { html = true, replyMarkup = null } = {}) {
+  const chunks = [...splitChunks(text, config.maxMsgLen)];
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
     const body = html
       ? { chat_id: config.chatId, text: `<pre>${escapeHtml(chunk)}</pre>`, parse_mode: 'HTML', disable_notification: true, disable_web_page_preview: true }
       : { chat_id: config.chatId, text: chunk, disable_notification: true, disable_web_page_preview: true };
+    if (replyMarkup && i === chunks.length - 1) body.reply_markup = replyMarkup;
     try {
       const res = await fetch(`${API}/sendMessage`, {
         method: 'POST',
